@@ -1,6 +1,5 @@
 # SDFC (Statistical Distribution Fit with Covariates)
 
-
 ## Features
 - python3 and R version
 - Fit with (or without) covariates parametric laws (Normal, Exp, Gamma, GEV, GPD)
@@ -35,6 +34,11 @@ python3 setup.py install eigen="path-to-eigen"
 The quantile regression is solved with the Frish-Newton algorithm, written in c++,
 depending of the Eigen c++ library. It is a re-written of the Fortran code of
 Koenker, available in the R package [quantreg](https://cran.r-project.org/web/packages/quantreg/index.html)
+
+
+## Example
+
+![Alt](/figures/Example_py.png)
 
 
 ## License
