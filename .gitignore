@@ -1,0 +1,17 @@
+*.so
+*.o
+a.out
+*.exe
+.DS_Store
+notebook/.ipynb_checkpoints
+*.swp
+RcppExports.cpp
+*.Rd
+*.egg-info
+build
+dist
+R/*.tar.gz
+documentation/TeX/logs/*
+*__pycache__*
+python/tests/*.log
+*.Rcheck
