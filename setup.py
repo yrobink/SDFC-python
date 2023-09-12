@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-## Copyright(c) 2020 Yoann Robin
+## Copyright(c) 2020 / 2023 Yoann Robin
 ## 
 ## This file is part of SDFC.
 ## 
@@ -22,10 +22,13 @@
 ## Packages ##
 ##############
 
-import sys,os
+import os
+import sys
+import sysconfig
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 import setuptools
+from pathlib import Path
 
 
 #####################
@@ -43,6 +46,12 @@ for i,arg in enumerate(sys.argv):
 if i_eigen > -1:
 	del sys.argv[i_eigen]
 
+
+############################
+## Python path resolution ##
+############################
+
+cpath = Path(__file__).parent
 
 ################################################################
 ## Some class and function to compile with Eigen and pybind11 ##
@@ -142,7 +151,7 @@ class BuildExt(build_ext):##{{{
 ext_modules = [
 	Extension(
 		'SDFC.NonParametric.__NonParametric_cpp',
-		['SDFC/src/NonParametric.cpp'],
+		[ str( cpath / 'SDFC/src/NonParametric.cpp') ],
 		include_dirs=[
 			# Path to pybind11 headers
 			get_eigen_include(eigen_usr_include),
@@ -170,21 +179,69 @@ list_packages = [
 ]
 
 
+########################
+## Infos from release ##
+########################
+
+exec( (cpath / "SDFC" / "__release.py").read_text() )
+
+
+#################
+## Description ##
+#################
+long_description = (cpath / "README.md").read_text()
+
+#setup(
+#	name = "SDFC" ,
+#	description = "Statistical Distribution Fit with Covariates" ,
+#	version = "0.7.0a1" ,
+#	author = "Yoann Robin" ,
+#	author_email = "yoann.robin.k@gmail.com" ,
+#	license = "GNU-GPL3" ,
+#	platforms = [ "linux" , "macosx" ] ,
+#	requires = [ "numpy" , "scipy" , "matplotlib" , "texttable" ],
+#	ext_modules = ext_modules,
+#	install_requires = ['pybind11>=2.2'],
+#	cmdclass = {'build_ext': BuildExt},
+#	zip_safe = False,
+#	packages = list_packages,
+#	package_dir = { "SDFC" : "SDFC" }
+#)
+
+#######################
+## And now the setup ##
+#######################
+
 setup(
-	name = "SDFC" ,
-	description = "Statistical Distribution Fit with Covariates" ,
-	version = "0.6.0r1" ,
-	author = "Yoann Robin" ,
-	author_email = "yoann.robin.k@gmail.com" ,
-	license = "GNU-GPL3" ,
-	platforms = [ "linux" , "macosx" ] ,
-	requires = [ "numpy" , "scipy" , "matplotlib" , "texttable" ],
-	ext_modules = ext_modules,
-	install_requires = ['pybind11>=2.2'],
-	cmdclass = {'build_ext': BuildExt},
-	zip_safe = False,
-	packages = list_packages,
-	package_dir = { "SDFC" : "SDFC" }
+	name         = name,
+	description  = description,
+	long_description = long_description,
+	long_description_content_type = 'text/markdown',
+	version      = version,
+	author       = author,
+	author_email = author_email,
+	license      = license,
+	platforms        = [ "linux" , "macosx" ],
+	classifiers      = [
+		"Development Status :: 5 - Production/Stable",
+		"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+		"Natural Language :: English",
+		"Operating System :: MacOS :: MacOS X",
+		"Operating System :: POSIX :: Linux",
+		"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3.7",
+		"Programming Language :: Python :: 3.8",
+		"Programming Language :: Python :: 3.9",
+		"Programming Language :: Python :: 3.10",
+		"Topic :: Scientific/Engineering :: Mathematics"
+	],
+	ext_modules      = ext_modules,
+	install_requires = [ "numpy" , "scipy" , "matplotlib" , "pybind11>=2.2" , "texttable"],
+	cmdclass         = {'build_ext': BuildExt},
+	zip_safe         = False,
+	packages         = list_packages,
+	package_dir      = { "SDFC" : "./SDFC" }
 )
+
 
 

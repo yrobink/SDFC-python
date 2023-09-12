@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-## Copyright(c) 2020 Yoann Robin
+## Copyright(c) 2020 / 2023 Yoann Robin
 ## 
 ## This file is part of SDFC.
 ## 
@@ -21,6 +21,8 @@
 ##############
 ## Packages ##
 ##############
+
+import warnings
 
 import numpy as np
 import scipy.optimize as sco
@@ -236,7 +238,9 @@ class AbstractLaw:
 		
 		while not is_success and n_test < max_test:
 			self._random_valid_point()
-			self.info_.mle_optim_result = sco.minimize( self._negloglikelihood , self.coef_ , jac = self._gradient_nlll , method = "BFGS" )
+			with warnings.catch_warnings():
+				warnings.simplefilter("ignore")
+				self.info_.mle_optim_result = sco.minimize( self._negloglikelihood , self.coef_ , jac = self._gradient_nlll , method = "BFGS" )
 			self.info_.cov_             = self.info_.mle_optim_result.hess_inv
 			self.coef_                  = self.info_.mle_optim_result.x
 			is_success                  = self.info_.mle_optim_result.success
@@ -262,7 +266,7 @@ class AbstractLaw:
 		##==================
 		transition = kwargs.get("transition")
 		if transition is None:
-			transition = lambda x : x + np.random.normal( size = n_features , scale = 0.1 )
+			transition = lambda x : x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
 		
 		## Define numbers of iterations of MCMC algorithm
 		##===============================================
@@ -336,7 +340,7 @@ class AbstractLaw:
 		
 		self.coef_ = np.zeros(self._rhs.n_features)
 		## Now fit
-		if self._method not in ["mle","bayesian"] and self._rhs.l_global._special_fit_allowed:
+		if self._method not in ["mle","bayesian","bayesian-experimental"] and self._rhs.l_global._special_fit_allowed:
 			self._special_fit()
 		elif self._method == "mle" :
 			self._fit_MLE(**kwargs)

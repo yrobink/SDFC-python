@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 
-## Copyright(c) 2020 / 2023 Yoann Robin
+## Copyright(c) 2023 Yoann Robin
 ## 
 ## This file is part of SDFC.
 ## 
@@ -18,17 +17,14 @@
 ## along with SDFC.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#############
-## Imports ##
-#############
+version_major = 0
+version_minor = 7
+version_patch = 0
+version_extra = ""
+version       = "{}.{}.{}{}".format(version_major,version_minor,version_patch,version_extra)
 
-from .__release import version
-__version__ = version
-
-from .__Normal      import Normal
-from .__Exponential import Exponential
-from .__Gamma       import Gamma
-from .__GEV         import GEV
-from .__GPD         import GPD
-
-from .__dataset import Dataset
+name = "SDFC"
+description = "Statistical Distribution Fit with Covariates"
+author = "Yoann Robin"
+author_email = "yoann.robin.k@gmail.com"
+license = "GNU General Public License v3"
