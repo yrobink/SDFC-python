@@ -228,7 +228,10 @@ class AbstractLaw:
 	
 	def _fit_MLE( self , **kwargs ): ##{{{
 		
-		self._init_MLE()
+		try:
+			self.coef_ = np.array(kwargs["init"]).ravel()
+		except:
+			self._init_MLE()
 		coef_ = self.coef_.copy()
 		
 		is_success = False
@@ -237,13 +240,14 @@ class AbstractLaw:
 		if max_test is None: max_test = 2
 		
 		while not is_success and n_test < max_test:
-			self._random_valid_point()
 			with warnings.catch_warnings():
 				warnings.simplefilter("ignore")
 				self.info_.mle_optim_result = sco.minimize( self._negloglikelihood , self.coef_ , jac = self._gradient_nlll , method = "BFGS" )
 			self.info_.cov_             = self.info_.mle_optim_result.hess_inv
 			self.coef_                  = self.info_.mle_optim_result.x
 			is_success                  = self.info_.mle_optim_result.success
+			if not is_success:
+				self._random_valid_point()
 			n_test += 1
 		
 		if not is_success:
@@ -336,7 +340,7 @@ class AbstractLaw:
 		self._rhs.build(**kwargs)
 		
 		if self._rhs.n_features == 0:
-			raise NameError("All parameters are fixed (n_features == 0), no fit")
+			raise ValueError("All parameters are fixed (n_features == 0), no fit")
 		
 		self.coef_ = np.zeros(self._rhs.n_features)
 		## Now fit
@@ -350,7 +354,7 @@ class AbstractLaw:
 		
 	##}}}
 	
-	def fit_bootstrap( self , Y , n_bootstrap , alpha , **kwargs ):##{{{
+	def fit_bootstrap( self , Y , n_bootstrap , **kwargs ):##{{{
 		"""
 		<law>.fit_bootstrap
 		===================
@@ -358,33 +362,44 @@ class AbstractLaw:
 		See global documentation for parameters
 		"""
 		
-		Y_       = Y.reshape(-1,1)
+		atleast2d = lambda x : x.reshape(-1,1) if x.ndim == 1 else x
+		
+		Y_       = atleast2d(Y)
 		n_sample = Y_.size
+		idxs     = np.random.choice( n_sample , n_sample * (n_bootstrap + 1) , replace = True ).reshape((n_bootstrap+1,n_sample))
+		idxs[0,:] = range(n_sample)
 		
 		coefs_bs = []
 		kwargs_bs = kwargs.copy()
 		for i in range(n_bootstrap):
-			idx = np.random.choice( n_sample , n_sample )
+			
+			idx = idxs[i,:]
+			
 			if "l_global" in kwargs:
 				kwargs_bs["l_global"] = kwargs["l_global"]
 				if kwargs.get("c_global") is not None:
 					kwargs_bs["c_global"] = []
 					for c in kwargs["c_global"]:
-						if c is None: kwargs_bs["c_global"].append(None)
-						else:kwargs_bs["c_global"].append(c[idx,:])
+						if c is None:
+							kwargs_bs["c_global"].append(None)
+						else:
+							
+							kwargs_bs["c_global"].append( atleast2d(c)[idx,:])
 			else:
 				for lhs in self._lhs.names:
 					if kwargs.get( "c_{}".format(lhs) ) is not None:
-						kwargs_bs["c_{}".format(lhs)] = kwargs["c_{}".format(lhs)][idx,:]
+						kwargs_bs["c_{}".format(lhs)] = atleast2d(kwargs[f"c_{lhs}"])[idx,:]
 					if kwargs.get( "f_{}".format(lhs) ) is not None:
-						kwargs_bs["f_{}".format(lhs)] = kwargs["f_{}".format(lhs)][idx,:]
+						kwargs_bs["f_{}".format(lhs)] = atleast2d(kwargs[f"f_{lhs}"])[idx,:]
+			
+			if len(coefs_bs) > 0:
+				kwargs_bs["init"] = coefs_bs[0]
+			
 			self.fit( Y_[idx,:] , **kwargs_bs )
 			coefs_bs.append(self.coef_.copy())
 		
 		self.info_.n_bootstrap  = n_bootstrap
-		self.info_.alpha_ci_    = alpha
 		self.info_.coefs_bs_    = np.array(coefs_bs)
-		self.info_.coefs_ci_bs_ = np.quantile( self.info_.coefs_bs_ , [self.info_.alpha_ci_ / 2 , 1 - self.info_.alpha_ci_ / 2] , axis = 0 )
 		
 		self.fit( Y , **kwargs )
 	##}}}
