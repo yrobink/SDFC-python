@@ -82,8 +82,6 @@ class AbstractLaw:
 	
 	n_bootstrap : int
 		Number of resampling
-	alpha       : float
-		Level of confidence interval
 	
 	
 	Possible attributes of <law>.info_
@@ -94,17 +92,14 @@ class AbstractLaw:
 		Result of the optimization of the MLE, if MLE is used
 	<law>.info_.n_bootstrap  : int
 		Number of resampling
-	<law>.info_.alpha_ci_    : float
-		Level of confidence interval
 	<law>.info_.coefs_bs_    : numpy.array[shape = (n_bootstrap,n_features)
 		Coef fitted with the bootstrap
-	<law>.info_.coefs_ci_bs_ : numpy.array[shape = (2,n_features)
-		Confidence interval computed with alpha / 2 and 1 - alpha / 2 quantiles
-		of <law>.info_.coefs_bs_
 	
 	
 	Optional arguments for MLE fit
 	==============================
+	init : numpy.array
+		Init value, optional
 	mle_n_restart : integer
 		The MLE needs to find a starting point before optimization, this
 		parameter control how many time the fit is restarted with a new random
