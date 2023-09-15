@@ -276,7 +276,7 @@ class AbstractLaw:
 		## MCMC algorithm
 		##===============
 		draw   = np.zeros( (n_mcmc_drawn,n_features) )
-		accept = np.zeros( n_mcmc_drawn , dtype = np.bool )
+		accept = np.zeros( n_mcmc_drawn , dtype = bool )
 		
 		## Init values
 		##============
