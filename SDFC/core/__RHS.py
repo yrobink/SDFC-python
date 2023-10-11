@@ -71,9 +71,10 @@ class RHS:
 		
 		## If global covariate and link functions are defined, just set it
 		##================================================================
-		if kwargs.get("c_global") is not None:
-			self.c_global = kwargs["c_global"]
-			self.l_global = kwargs.get("l_global")
+		if kwargs.get("c_global") is not None or kwargs.get("l_global") is not None:
+			self.c_global = kwargs.get("c_global")
+			self.l_global = kwargs.get("l_global" , MLTensor( [] , [1 for _ in range(self.lhs_.n_lhs)] , n_features = self.lhs_.n_lhs ) )
+			self.l_global._n_samples = self.lhs_.n_samples
 			return
 		
 		## Else loop on lhs to find global parameters
