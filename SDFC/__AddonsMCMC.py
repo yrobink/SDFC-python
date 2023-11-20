@@ -21,3 +21,6 @@
 ##############
 ## Packages ##
 ##############
+from __TransitionsMCMC import *
+import numpy as np
+import scipy.stats as sc
