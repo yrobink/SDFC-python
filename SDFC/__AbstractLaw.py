@@ -31,6 +31,7 @@ import scipy.stats as sc
 from .core.__LHS import LHS
 from .core.__RHS import RHS
 
+from __TransitionsMCMC import *
 
 ###############
 ## Class(es) ##
@@ -263,9 +264,16 @@ class AbstractLaw:
 		
 		## Define transition
 		##==================
-		transition = kwargs.get("transition")
+		
+		transition_type = kwargs.get("transition_type") #None: old case, Fixed:Give tran_scale_G value, Adapt: adaptative
+		transition = kwargs.get("transition") #Si previous, relevant function
+		if transition_type =="Fixed":
+			tran_scale_G=kwargs.get("fixed_cov")
+			transition=transition_fixed
+		if transition_type =="Adapt":
+			transition=transition_adaptative
 		if transition is None:
-			transition = lambda x : x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
+			transition = lambda x: x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
 		
 		## Define numbers of iterations of MCMC algorithm
 		##===============================================
@@ -290,7 +298,12 @@ class AbstractLaw:
 		p_current     = prior_current + lll_current
 		
 		for i in range(1,n_mcmc_drawn):
-			draw[i,:] = transition(draw[i-1,:])
+			if transition_type =="Adapt":
+				draw[i,:] = transition_adaptative(draw[i-1,:],i,draw[:(i-1),:])
+			elif transition_type =="Fixed":
+				draw[i,:] = transition(draw[i-1,:],tran_scale_G)
+			else:
+				draw[i,:] = transition(draw[i-1,:])
 			
 			## Likelihood and probability of new points
 			lll_next   = - self._negloglikelihood(draw[i,:])

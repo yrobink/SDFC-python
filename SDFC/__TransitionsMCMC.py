@@ -28,7 +28,7 @@ import numpy as np
 ## Functions##
 ##############
 
-def transition(x,tran_scale_G):
+def transition_fixed(x,tran_scale_G):
 
     """
     Fixed Transition Function For Metropolis-Hasting
@@ -104,7 +104,7 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
 
 
 
-def transition_SCAM(x ,i,draw,prev_sigma,initTrans=0.01,epsilon=0.01):
+def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01):
     """
     Adaptative Transition Function For Metropolis-Hasting Within Gibbs
     Adaptative Metropolis (Haario et al. 2005), Based on ([Roberts et Rosenthal, 2009,]) 
@@ -129,8 +129,6 @@ def transition_SCAM(x ,i,draw,prev_sigma,initTrans=0.01,epsilon=0.01):
     ----------
     x1  : float
         New value sampled for the dimension of interest
-    sigma : *string
-        Calculated sigma
     
     
     """
@@ -154,5 +152,5 @@ def transition_SCAM(x ,i,draw,prev_sigma,initTrans=0.01,epsilon=0.01):
     
     x1=x+np.random.normal( size = 1 , scale = sigma )
 
-    return(x1,sigma)
+    return(x1)
 
