@@ -31,7 +31,7 @@ import scipy.stats as sc
 from .core.__LHS import LHS
 from .core.__RHS import RHS
 
-from __TransitionsMCMC import *
+from .__TransitionsMCMC import *
 
 ###############
 ## Class(es) ##
@@ -252,6 +252,7 @@ class AbstractLaw:
 	##}}}
 	
 	def _fit_Bayesian( self , **kwargs ):##{{{
+		print("fit")
 		## Find numbers of features
 		##=========================
 		n_features = self._rhs.n_features
@@ -299,9 +300,9 @@ class AbstractLaw:
 		
 		for i in range(1,n_mcmc_drawn):
 			if transition_type =="Adapt":
-				draw[i,:] = transition_adaptative(draw[i-1,:],i,draw[:(i-1),:])
+				draw[i,:] = transition(draw[i-1,:], i, draw[:(i-1),:])
 			elif transition_type =="Fixed":
-				draw[i,:] = transition(draw[i-1,:],tran_scale_G)
+				draw[i,:] = transition(draw[i-1,:], tran_scale_G)
 			else:
 				draw[i,:] = transition(draw[i-1,:])
 			
@@ -357,6 +358,7 @@ class AbstractLaw:
 		elif self._method == "mle" :
 			self._fit_MLE(**kwargs)
 		else:
+			print("fit0")
 			self._fit_Bayesian(**kwargs)
 		
 		

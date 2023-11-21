@@ -38,24 +38,25 @@ def transition_fixed(x,tran_scale_G):
     
     Parameters
     ----------
-    x  : *list
+    x  : np.array
         One or All dimensions, past value
-    tran_scale_G: *list
+    tran_scale_G: np.array
         Covariance, one or all dimensions  
     
     Outputs
     ----------
     x1  : float
-        New values sampled (same dimension as x and tran_scale_G)
+        New values sampled (same dimension as x )
 
     
     
     """
+    
     if len(tran_scale_G.shape)==1:
-    	#(can be a 1d vector)
-        tran_scale_G=np.diag(tran_scale_G*tran_scale_G)
+    	#(can be a 1d vector or a unique value)
+        tran_scale_G=np.identity(x.shape[0])*(tran_scale_G*tran_scale_G)
     #(or a 5d matrix)
-    x1=x+np.random.default_rng().multivariate_normal( mean=[0,0,0,0,0],cov = tran_scale_G )
+    x1=x+np.random.default_rng().multivariate_normal( mean=[0]*x.shape[0],cov = tran_scale_G )
     #Used to be np.random.normal(scale=tran_scale_G)
     return(x1)
 
@@ -71,12 +72,12 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
     
     Parameters
     ----------
-    x  : *list
+    x  : np.array
         All dimensions, past value
     i : int
         which dimension is treated
-    draw : *list
-        ?
+    draw :np.array
+    	Past samples for cov calculation
     initTrans : float
         Variance during the pre-period used to then start the adaptation.   
     epsilon  : float
@@ -90,15 +91,16 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
     
     
     """
-    if i<1000:
-        sigma=np.identity(draw.shape[1])*(init)
+    print("Adapt")
+    if i<500:
+        sigma=np.identity(x.shape[0])*(init)
         #pre period
     else:
         #Adaptative period
-        sigma=np.cov(draw,rowvar=False)*(2.38*2.38/draw.shape[1])+np.identity(draw.shape[1])*(epsilon)
+        sigma=np.cov(draw,rowvar=False)*(2.38*2.38/draw.shape[1])+np.identity(x.shape[0])*(epsilon)
     
     
-    x1=x+np.random.default_rng().multivariate_normal( mean=[0,0,0,0,0],cov = sigma )
+    x1=x+np.random.default_rng().multivariate_normal( mean=[0]*x.shape[0],cov = sigma )
     #Used to be np.random.normal(scale=tran_scale_G)
     return(x1)
 
