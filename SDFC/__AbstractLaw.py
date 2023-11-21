@@ -252,7 +252,7 @@ class AbstractLaw:
 	##}}}
 	
 	def _fit_Bayesian( self , **kwargs ):##{{{
-		print("fit")
+		
 		## Find numbers of features
 		##=========================
 		n_features = self._rhs.n_features
@@ -357,6 +357,8 @@ class AbstractLaw:
 			self._special_fit()
 		elif self._method == "mle" :
 			self._fit_MLE(**kwargs)
+		elif self._method =="bayesian-experimental":
+			self._fit_Bayesian_MHWG(**kwargs)
 		else:
 			print("fit0")
 			self._fit_Bayesian(**kwargs)
@@ -413,4 +415,91 @@ class AbstractLaw:
 		
 		self.fit( Y , **kwargs )
 	##}}}
+	def _fit_Bayesian_MHWG( self , **kwargs ):##{{{
+		## Metropolis-Hasting Within Gibbs
+		## One dimension after another for each iteration
+		##=========================
+		
+		
+		
+		print("fit")
+		## Find numbers of features
+		##=========================
+		n_features = self._rhs.n_features
+		
+		## Define prior
+		##=============
+		prior = kwargs.get("prior")
+		if prior is None:
+			prior = sc.multivariate_normal( mean = np.zeros(n_features) , cov = 10 * np.identity(n_features) )
+		
+		## Define transition
+		##==================
+		
+		transition_type = kwargs.get("transition_type") #None: old case, Fixed:Give tran_scale_G value, Adapt: adaptative
+		transition = kwargs.get("transition") #Si previous, relevant function
+		if transition_type =="Fixed":
+			tran_scale_G=kwargs.get("fixed_cov")
+			transition=transition_fixed
+		if transition_type =="Adapt":
+			transition=transition_SCAM
+		if transition is None:
+			transition = lambda x: x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
+		
+		## Define numbers of iterations of MCMC algorithm
+		##===============================================
+		n_mcmc_drawn = kwargs.get("n_mcmc_drawn")
+		if n_mcmc_drawn is None:
+			n_mcmc_drawn = 10000
+		
+		## MCMC algorithm
+		##===============
+		draw   = np.zeros( (n_mcmc_drawn,n_features) )
+		accept = np.zeros((n_mcmc_drawn,n_features) , dtype = np.bool )
+		
+		## Init values
+		##============
+		init = kwargs.get("mcmc_init")
+		if init is None:
+			init = prior.rvs()
+		
+		draw[0,:]     = init
+		lll_current   = -self._negloglikelihood(draw[0,:])
+		prior_current = prior.logpdf(draw[0,:]).sum()
+		p_current     = prior_current + lll_current
+		
+		for i in range(1,n_mcmc_drawn):
+			draw[i,:]=draw[i-1,:]
+			for j in range(n_features):
+			
+				if transition_type =="Adapt":
+					draw[i,j] = transition(draw[i,j], i, draw[:(i),j])
+				elif transition_type =="Fixed":
+					draw[i,j] = transition(draw[i-1,j], tran_scale_G[j])
 
+			
+				## Likelihood and probability of new points
+				lll_next   = - self._negloglikelihood(draw[i,:])
+				prior_next = prior.logpdf(draw[i,:]).sum()
+				p_next     = prior_next + lll_next
+			
+				## Accept or not ?
+				p_accept = np.exp( p_next - p_current )
+				if np.random.uniform() < p_accept:
+					lll_current   = lll_next
+					prior_current = prior_next
+					p_current     = p_next
+					accept[i,j] = True
+				else:
+					draw[i,j] = draw[i-1,j]
+					accept[i,j] = False
+		
+		self.coef_ = np.mean( draw[int(n_mcmc_drawn/2):,:] , axis = 0 )
+		
+		## Update information
+		self.info_.draw         = draw
+		self.info_.accept       = accept
+		self.info_.n_mcmc_drawn = n_mcmc_drawn
+		self.info_.rate_accept  = np.sum(accept) / n_mcmc_drawn
+		self.info_._cov         = np.cov(draw.T)
+	##}}}
