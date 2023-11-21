@@ -96,7 +96,7 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
     
     
     """
-    print("Adapt")
+    
     if i<500:
         sigma=np.identity(x.shape[0])*(init)
         #pre period
@@ -114,7 +114,7 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
 def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01):
     """
     Adaptative Transition Function For Metropolis-Hasting Within Gibbs
-    Adaptative Metropolis (Haario et al. 2005), Based on ([Roberts et Rosenthal, 2009,]) 
+    Adaptative Metropolis Within Gibbs (Haario et al. 2005), Based on ([Roberts et Rosenthal, 2009,]) 
     Univariate normal centered on 0
     Use past draw to calculate covariance 
     1 dimension
