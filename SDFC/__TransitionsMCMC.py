@@ -51,12 +51,17 @@ def transition_fixed(x,tran_scale_G):
     
     
     """
-    
-    if len(tran_scale_G.shape)==1:
+    if len(x.shape)==0:
+    	length_vect=1
+    	x1=x+np.random.normal(scale=tran_scale_G)
+    else:
+    	length_vect=x.shape[0]
+    	
+    	if len(tran_scale_G.shape)==1:
     	#(can be a 1d vector or a unique value)
-        tran_scale_G=np.identity(x.shape[0])*(tran_scale_G*tran_scale_G)
+        	tran_scale_G=np.identity(length_vect)*(tran_scale_G*tran_scale_G)
     #(or a 5d matrix)
-    x1=x+np.random.default_rng().multivariate_normal( mean=[0]*x.shape[0],cov = tran_scale_G )
+    	x1=x+np.random.default_rng().multivariate_normal( mean=[0]*length_vect,cov = tran_scale_G )
     #Used to be np.random.normal(scale=tran_scale_G)
     return(x1)
 

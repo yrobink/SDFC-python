@@ -455,7 +455,7 @@ class AbstractLaw:
 		## MCMC algorithm
 		##===============
 		draw   = np.zeros( (n_mcmc_drawn,n_features) )
-		accept = np.zeros((n_mcmc_drawn,n_features) , dtype = np.bool )
+		accept = np.zeros((n_mcmc_drawn,n_features) , dtype = bool )
 		
 		## Init values
 		##============
@@ -471,7 +471,7 @@ class AbstractLaw:
 		for i in range(1,n_mcmc_drawn):
 			draw[i,:]=draw[i-1,:]
 			for j in range(n_features):
-			
+				
 				if transition_type =="Adapt":
 					draw[i,j] = transition(draw[i,j], i, draw[:(i),j])
 				elif transition_type =="Fixed":
