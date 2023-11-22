@@ -618,12 +618,12 @@ class AbstractLaw:
 			else:
 				draw[i,:] = draw[i-1,:]
 				accept[i] = False
-			if (i>(burn_in))&((i%n_sortie)==0):
+			if (i>(burn_in))&((i%n_ess)==0):
 				#Check if goal ess is atained for the least dimension.
 				idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
 				effective_samples_para=arviz.ess(idata).x.to_numpy()
 
-				if min(effective_samples_para) > n_sortie:
+				if min(effective_samples_para) > n_ess:
 					inMCMC=False
 
 		#Get rid of burn-in
@@ -735,13 +735,13 @@ class AbstractLaw:
 				else:
 					draw[i,j] = draw[i-1,j]
 					accept[i,j] = False
-				if i>(2*burn_in):
-				#Check if goal ess is atained for the least dimension.
-				idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
-				effective_samples_para=arviz.ess(idata).x.to_numpy()
+				if i>(burn_in):
+					#Check if goal ess is atained for the least dimension.
+					idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
+					effective_samples_para=arviz.ess(idata).x.to_numpy()
 			
-				if min(effective_samples_para) > n_sortie:
-					inMCMC=False
+					if min(effective_samples_para) > n_ess:
+						inMCMC=False
 		
 		#Get rid of burn-in
 		draw=draw[burn_in:i,:]

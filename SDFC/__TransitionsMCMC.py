@@ -111,7 +111,7 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01,len_pre=500):
 
 
 
-def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01,len_pre=500):
+def transition_SCAM(x ,i,draw,init=0.01,epsilon=0.01,len_pre=500):
     """
     Adaptative Transition Function For Metropolis-Hasting Within Gibbs
     Adaptative Metropolis Within Gibbs (Haario et al. 2005), Based on ([Roberts et Rosenthal, 2009,]) 
@@ -140,7 +140,7 @@ def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01,len_pre=500):
     
     """
     if i<len_pre:
-        sigma=initTrans
+        sigma=init
         #pre period
     elif i==len_pre:
         sigma=np.var(draw)*2.4+epsilon
