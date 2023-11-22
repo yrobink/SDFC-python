@@ -273,6 +273,15 @@ class AbstractLaw:
 			transition=transition_fixed
 		if transition_type =="Adapt":
 			transition=transition_adaptative
+			transition_init=kwargs.get("transition_init")
+			if transition_init is None:
+				transition_init=0.01
+			transition_epsilon=kwargs.get("transition_epsilon")
+			if transition_epsilon is None:
+				transition_epsilon=0.01
+			transition_len_pre=kwargs.get("transition_len_pre")
+			if transition_len_pre is None:
+				transition_len_pre=500
 		if transition is None:
 			transition = lambda x: x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
 		
@@ -300,7 +309,7 @@ class AbstractLaw:
 		
 		for i in range(1,n_mcmc_drawn):
 			if transition_type =="Adapt":
-				draw[i,:] = transition(draw[i-1,:], i, draw[:(i-1),:])
+				draw[i,:] = transition(draw[i-1,:], i, draw[:(i-1),:],init=transition_init,epsilon=transition_epsilon,len_pre=transition_len_pre)
 			elif transition_type =="Fixed":
 				draw[i,:] = transition(draw[i-1,:], tran_scale_G)
 			else:
@@ -443,6 +452,16 @@ class AbstractLaw:
 			transition=transition_fixed
 		if transition_type =="Adapt":
 			transition=transition_SCAM
+			transition_init=kwargs.get("transition_init")
+			if transition_init is None:
+				transition_init=0.01
+			transition_epsilon=kwargs.get("transition_epsilon")
+			if transition_epsilon is None:
+				transition_epsilon=0.01
+			transition_len_pre=kwargs.get("transition_len_pre")
+			if transition_len_pre is None:
+				transition_len_pre=500
+				
 		if transition is None:
 			transition = lambda x: x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
 		
@@ -473,7 +492,7 @@ class AbstractLaw:
 			for j in range(n_features):
 				
 				if transition_type =="Adapt":
-					draw[i,j] = transition(draw[i,j], i, draw[:(i),j])
+					draw[i,j] = transition(draw[i,j], i, draw[:(i),j],init=transition_init,epsilon=transition_epsilon,len_pre=transition_len_pre)
 				elif transition_type =="Fixed":
 					draw[i,j] = transition(draw[i-1,j], tran_scale_G[j])
 

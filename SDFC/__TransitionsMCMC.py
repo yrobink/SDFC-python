@@ -66,7 +66,7 @@ def transition_fixed(x,tran_scale_G):
     return(x1)
 
 #Adaptative MH
-def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
+def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01,len_pre=500):
 
     """
     Adaptative Transition Function For Metropolis-Hasting
@@ -97,7 +97,7 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
     
     """
     
-    if i<500:
+    if i<len_pre:
         sigma=np.identity(x.shape[0])*(init)
         #pre period
     else:
@@ -111,7 +111,7 @@ def transition_adaptative(x,i,draw,init=0.01,epsilon=0.01):
 
 
 
-def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01):
+def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01,len_pre=500):
     """
     Adaptative Transition Function For Metropolis-Hasting Within Gibbs
     Adaptative Metropolis Within Gibbs (Haario et al. 2005), Based on ([Roberts et Rosenthal, 2009,]) 
@@ -139,10 +139,10 @@ def transition_SCAM(x ,i,draw,initTrans=0.01,epsilon=0.01):
     
     
     """
-    if i<500:
+    if i<len_pre:
         sigma=initTrans
         #pre period
-    elif i==500:
+    elif i==len_pre:
         sigma=np.var(draw)*2.4+epsilon
         #start adaptation
     else:
