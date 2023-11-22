@@ -27,6 +27,8 @@ import warnings
 import numpy as np
 import scipy.optimize as sco
 import scipy.stats as sc
+import arviz #for ess univariate, install with conda install -c conda-forge arviz
+
 
 from .core.__LHS import LHS
 from .core.__RHS import RHS
@@ -362,14 +364,17 @@ class AbstractLaw:
 		
 		self.coef_ = np.zeros(self._rhs.n_features)
 		## Now fit
-		if self._method not in ["mle","bayesian","bayesian-experimental"] and self._rhs.l_global._special_fit_allowed:
+		if self._method not in ["mle","bayesian","bayesian-experimental-MHWG","bayesian-experimental-ESS","bayesian-experimental-MHWG-ESS"] and self._rhs.l_global._special_fit_allowed:
 			self._special_fit()
 		elif self._method == "mle" :
 			self._fit_MLE(**kwargs)
-		elif self._method =="bayesian-experimental":
+		elif self._method =="bayesian-experimental-MHWG":
 			self._fit_Bayesian_MHWG(**kwargs)
+		elif self._method =="bayesian-experimental-ESS":
+			self._fit_Bayesian_ESS(**kwargs)
+		elif self._method =="bayesian-experimental-MHWG-ESS":
+			self._fit_Bayesian_MHWG_ESS(**kwargs)
 		else:
-			print("fit0")
 			self._fit_Bayesian(**kwargs)
 		
 		
@@ -520,5 +525,233 @@ class AbstractLaw:
 		self.info_.accept       = accept
 		self.info_.n_mcmc_drawn = n_mcmc_drawn
 		self.info_.rate_accept  = np.sum(accept) / n_mcmc_drawn
+		self.info_._cov         = np.cov(draw.T)
+	def _fit_Bayesian_ESS( self , **kwargs ):##{{{
+		
+		## Find numbers of features
+		##=========================
+		n_features = self._rhs.n_features
+		
+		## Define prior
+		##=============
+		prior = kwargs.get("prior")
+		if prior is None:
+			prior = sc.multivariate_normal( mean = np.zeros(n_features) , cov = 10 * np.identity(n_features) )
+		
+		## Define transition
+		##==================
+		
+		transition_type = kwargs.get("transition_type") #None: old case, Fixed:Give tran_scale_G value, Adapt: adaptative
+		transition = kwargs.get("transition") #Si previous, relevant function
+		if transition_type =="Fixed":
+			tran_scale_G=kwargs.get("fixed_cov")
+			transition=transition_fixed
+		if transition_type =="Adapt":
+			transition=transition_adaptative
+			transition_init=kwargs.get("transition_init")
+			if transition_init is None:
+				transition_init=0.01
+			transition_epsilon=kwargs.get("transition_epsilon")
+			if transition_epsilon is None:
+				transition_epsilon=0.01
+			transition_len_pre=kwargs.get("transition_len_pre")
+			if transition_len_pre is None:
+				transition_len_pre=500
+		if transition is None:
+			transition = lambda x: x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
+		
+		## Define ESS goal for stopping the MCMC +  fixed Burn-in period
+		##===============================================
+
+		n_ess = kwargs.get("n_ess")
+		if n_ess is None:
+			n_ess = 100
+		burn_in = kwargs.get("burn_in")
+		if burn_in is None:
+			burn_in = 1000
+		n_mcmc_drawn = kwargs.get("n_mcmc_drawn") #Used as maximum of iterations
+		if n_mcmc_drawn is None:
+			n_mcmc_drawn = 10000
+
+			
+			
+		
+		## MCMC algorithm
+		##===============
+		draw   = np.zeros( (n_mcmc_drawn,n_features) )
+		accept = np.zeros( n_mcmc_drawn , dtype = bool )
+		
+		## Init values
+		##============
+		init = kwargs.get("mcmc_init")
+		if init is None:
+			init = prior.rvs()
+		
+		draw[0,:]     = init
+		lll_current   = -self._negloglikelihood(draw[0,:])
+		prior_current = prior.logpdf(draw[0,:]).sum()
+		p_current     = prior_current + lll_current
+		
+		inMCMC=True
+		i=0
+		while inMCMC:
+			i=i+1
+			if transition_type =="Adapt":
+				draw[i,:] = transition(draw[i-1,:], i, draw[:(i-1),:],init=transition_init,epsilon=transition_epsilon,len_pre=transition_len_pre)
+			elif transition_type =="Fixed":
+				draw[i,:] = transition(draw[i-1,:], tran_scale_G)
+			else:
+				draw[i,:] = transition(draw[i-1,:])
+			
+			## Likelihood and probability of new points
+			lll_next   = - self._negloglikelihood(draw[i,:])
+			prior_next = prior.logpdf(draw[i,:]).sum()
+			p_next     = prior_next + lll_next
+			
+			## Accept or not ?
+			p_accept = np.exp( p_next - p_current )
+			if np.random.uniform() < p_accept:
+				lll_current   = lll_next
+				prior_current = prior_next
+				p_current     = p_next
+				accept[i] = True
+			else:
+				draw[i,:] = draw[i-1,:]
+				accept[i] = False
+			if (i>(burn_in))&((i%n_sortie)==0):
+				#Check if goal ess is atained for the least dimension.
+				idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
+				effective_samples_para=arviz.ess(idata).x.to_numpy()
+
+				if min(effective_samples_para) > n_sortie:
+					inMCMC=False
+
+		#Get rid of burn-in
+		draw=draw[burn_in:i,:]
+		accept=accept[burn_in:i]
+		self.coef_ = np.mean( draw , axis = 0 )
+		
+		## Update information
+		self.info_.draw         = draw
+		self.info_.accept       = accept
+		self.info_.n_mcmc_drawn = i
+		self.info_.rate_accept  = np.sum(accept) / i
+		self.info_._cov         = np.cov(draw.T)
+	def _fit_Bayesian_MHWG_ESS( self , **kwargs ):##{{{
+		## Metropolis-Hasting Within Gibbs
+		## One dimension after another for each iteration
+		##=========================
+		
+		
+		
+		print("fit")
+		## Find numbers of features
+		##=========================
+		n_features = self._rhs.n_features
+		
+		## Define prior
+		##=============
+		prior = kwargs.get("prior")
+		if prior is None:
+			prior = sc.multivariate_normal( mean = np.zeros(n_features) , cov = 10 * np.identity(n_features) )
+		
+		## Define transition
+		##==================
+		
+		transition_type = kwargs.get("transition_type") #None: old case, Fixed:Give tran_scale_G value, Adapt: adaptative
+		transition = kwargs.get("transition") #Si previous, relevant function
+		if transition_type =="Fixed":
+			tran_scale_G=kwargs.get("fixed_cov")
+			transition=transition_fixed
+		if transition_type =="Adapt":
+			transition=transition_SCAM
+			transition_init=kwargs.get("transition_init")
+			if transition_init is None:
+				transition_init=0.01
+			transition_epsilon=kwargs.get("transition_epsilon")
+			if transition_epsilon is None:
+				transition_epsilon=0.01
+			transition_len_pre=kwargs.get("transition_len_pre")
+			if transition_len_pre is None:
+				transition_len_pre=500
+				
+		if transition is None:
+			transition = lambda x: x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
+		
+		## Define ESS goal for stopping the MCMC +  fixed Burn-in period
+		##===============================================
+
+		n_ess = kwargs.get("n_ess")
+		if n_ess is None:
+			n_ess = 100
+		burn_in = kwargs.get("burn_in")
+		if burn_in is None:
+			burn_in = 1000
+		n_mcmc_drawn = kwargs.get("n_mcmc_drawn") #Used as maximum of iterations
+		if n_mcmc_drawn is None:
+			n_mcmc_drawn = 10000
+		
+		## MCMC algorithm
+		##===============
+		draw   = np.zeros( (n_mcmc_drawn,n_features) )
+		accept = np.zeros((n_mcmc_drawn,n_features) , dtype = bool )
+		
+		## Init values
+		##============
+		init = kwargs.get("mcmc_init")
+		if init is None:
+			init = prior.rvs()
+		
+		draw[0,:]     = init
+		lll_current   = -self._negloglikelihood(draw[0,:])
+		prior_current = prior.logpdf(draw[0,:]).sum()
+		p_current     = prior_current + lll_current
+		
+		inMCMC=True
+		i=0
+		while inMCMC:
+			i=i+1
+			draw[i,:]=draw[i-1,:]
+			for j in range(n_features):
+				
+				if transition_type =="Adapt":
+					draw[i,j] = transition(draw[i,j], i, draw[:(i),j],init=transition_init,epsilon=transition_epsilon,len_pre=transition_len_pre)
+				elif transition_type =="Fixed":
+					draw[i,j] = transition(draw[i-1,j], tran_scale_G[j])
+
+			
+				## Likelihood and probability of new points
+				lll_next   = - self._negloglikelihood(draw[i,:])
+				prior_next = prior.logpdf(draw[i,:]).sum()
+				p_next     = prior_next + lll_next
+			
+				## Accept or not ?
+				p_accept = np.exp( p_next - p_current )
+				if np.random.uniform() < p_accept:
+					lll_current   = lll_next
+					prior_current = prior_next
+					p_current     = p_next
+					accept[i,j] = True
+				else:
+					draw[i,j] = draw[i-1,j]
+					accept[i,j] = False
+				if i>(2*burn_in):
+				#Check if goal ess is atained for the least dimension.
+				idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
+				effective_samples_para=arviz.ess(idata).x.to_numpy()
+			
+				if min(effective_samples_para) > n_sortie:
+					inMCMC=False
+		
+		#Get rid of burn-in
+		draw=draw[burn_in:i,:]
+		accept=accept[burn_in:i]
+		self.coef_ = np.mean( draw , axis = 0 )
+		
+		## Update information
+		self.info_.draw         = draw
+		self.info_.accept       = accept
+		self.info_.n_mcmc_drawn = i
+		self.info_.rate_accept  = np.sum(accept) / i
 		self.info_._cov         = np.cov(draw.T)
 	##}}}
