@@ -364,15 +364,16 @@ class AbstractLaw:
 		
 		self.coef_ = np.zeros(self._rhs.n_features)
 		## Now fit
-		if self._method not in ["mle","bayesian","bayesian-experimental-MHWG","bayesian-experimental-ESS","bayesian-experimental-MHWG-ESS"] and self._rhs.l_global._special_fit_allowed:
+		
+		if self._method not in ["mle","bayesian","bayesian-experimental-mhwg","bayesian-experimental-ess","bayesian-experimental-mhwg-ess"] and self._rhs.l_global._special_fit_allowed:
 			self._special_fit()
 		elif self._method == "mle" :
 			self._fit_MLE(**kwargs)
-		elif self._method =="bayesian-experimental-MHWG":
+		elif self._method =="bayesian-experimental-mhwg":
 			self._fit_Bayesian_MHWG(**kwargs)
-		elif self._method =="bayesian-experimental-ESS":
-			self._fit_Bayesian_ESS(**kwargs)
-		elif self._method =="bayesian-experimental-MHWG-ESS":
+		elif self._method =="bayesian-experimental-ess":
+			self._fit_Bayesian_ESS(**kwargs)			
+		elif self._method =="bayesian-experimental-mhwg-ess":
 			self._fit_Bayesian_MHWG_ESS(**kwargs)
 		else:
 			self._fit_Bayesian(**kwargs)
@@ -429,14 +430,14 @@ class AbstractLaw:
 		
 		self.fit( Y , **kwargs )
 	##}}}
-	def _fit_Bayesian_MHWG( self , **kwargs ):##{{{
+	def _fit_Bayesian_MHWG( self , **kwargs ): ##{{{
 		## Metropolis-Hasting Within Gibbs
 		## One dimension after another for each iteration
 		##=========================
 		
 		
 		
-		print("fit")
+		
 		## Find numbers of features
 		##=========================
 		n_features = self._rhs.n_features
@@ -524,8 +525,9 @@ class AbstractLaw:
 		self.info_.draw         = draw
 		self.info_.accept       = accept
 		self.info_.n_mcmc_drawn = n_mcmc_drawn
-		self.info_.rate_accept  = np.sum(accept) / n_mcmc_drawn
+		self.info_.rate_accept  = np.sum(accept) / (n_mcmc_drawn*n_features)
 		self.info_._cov         = np.cov(draw.T)
+	##}}}	
 	def _fit_Bayesian_ESS( self , **kwargs ):##{{{
 		
 		## Find numbers of features
@@ -636,15 +638,17 @@ class AbstractLaw:
 		self.info_.accept       = accept
 		self.info_.n_mcmc_drawn = i
 		self.info_.rate_accept  = np.sum(accept) / i
+		
 		self.info_._cov         = np.cov(draw.T)
-	def _fit_Bayesian_MHWG_ESS( self , **kwargs ):##{{{
+	##}}}	
+	def _fit_Bayesian_MHWG_ESS( self , **kwargs ): ##{{{
 		## Metropolis-Hasting Within Gibbs
 		## One dimension after another for each iteration
 		##=========================
 		
 		
 		
-		print("fit")
+		
 		## Find numbers of features
 		##=========================
 		n_features = self._rhs.n_features
@@ -752,6 +756,6 @@ class AbstractLaw:
 		self.info_.draw         = draw
 		self.info_.accept       = accept
 		self.info_.n_mcmc_drawn = i
-		self.info_.rate_accept  = np.sum(accept) / i
+		self.info_.rate_accept  = np.sum(accept) / (i*n_features)
 		self.info_._cov         = np.cov(draw.T)
 	##}}}
