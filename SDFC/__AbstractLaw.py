@@ -487,12 +487,13 @@ class AbstractLaw:
 		init = kwargs.get("mcmc_init")
 		if init is None:
 			init = prior.rvs()
-		
+		print(init)
 		draw[0,:]     = init
 		lll_current   = -self._negloglikelihood(draw[0,:])
 		prior_current = prior.logpdf(draw[0,:]).sum()
 		p_current     = prior_current + lll_current
-		
+		print(prior_current)
+		print(type(prior_current))
 		for i in range(1,n_mcmc_drawn):
 			draw[i,:]=draw[i-1,:]
 			for j in range(n_features):
@@ -506,6 +507,7 @@ class AbstractLaw:
 				## Likelihood and probability of new points
 				lll_next   = - self._negloglikelihood(draw[i,:])
 				prior_next = prior.logpdf(draw[i,:]).sum()
+				#print(prior_next)
 				p_next     = prior_next + lll_next
 			
 				## Accept or not ?
@@ -526,6 +528,8 @@ class AbstractLaw:
 		self.info_.accept       = accept
 		self.info_.n_mcmc_drawn = n_mcmc_drawn
 		self.info_.rate_accept  = np.sum(accept) / (n_mcmc_drawn*n_features)
+		print(self.info_.rate_accept)
+		print(prior_current)
 		self.info_._cov         = np.cov(draw.T)
 	##}}}	
 	def _fit_Bayesian_ESS( self , **kwargs ):##{{{
@@ -620,7 +624,7 @@ class AbstractLaw:
 			else:
 				draw[i,:] = draw[i-1,:]
 				accept[i] = False
-			if (i>(burn_in))&((i%n_ess)==0):
+			if (i>(burn_in+n_ess))&((i%n_ess)==0):
 				#Check if goal ess is atained for the least dimension.
 				idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
 				effective_samples_para=arviz.ess(idata).x.to_numpy()
@@ -720,6 +724,7 @@ class AbstractLaw:
 				
 				if transition_type =="Adapt":
 					draw[i,j] = transition(draw[i,j], i, draw[:(i),j],init=transition_init,epsilon=transition_epsilon,len_pre=transition_len_pre)
+					
 				elif transition_type =="Fixed":
 					draw[i,j] = transition(draw[i-1,j], tran_scale_G[j])
 
@@ -739,11 +744,12 @@ class AbstractLaw:
 				else:
 					draw[i,j] = draw[i-1,j]
 					accept[i,j] = False
-				if i>(burn_in):
+				if i>(burn_in+n_ess):
+					
 					#Check if goal ess is atained for the least dimension.
 					idata = arviz.convert_to_inference_data(np.expand_dims(draw[burn_in:i,:], 0))
 					effective_samples_para=arviz.ess(idata).x.to_numpy()
-			
+					print(min(effective_samples_para))
 					if min(effective_samples_para) > n_ess:
 						inMCMC=False
 		
