@@ -31,6 +31,8 @@ import scipy.stats as sc
 from .core.__LHS import LHS
 from .core.__RHS import RHS
 
+from .__bayesian_mcmc_cpp import mcmc_cpp
+
 
 ###############
 ## Class(es) ##
@@ -251,71 +253,73 @@ class AbstractLaw:
 	##}}}
 	
 	def _fit_Bayesian( self , **kwargs ):##{{{
+		
 		## Find numbers of features
-		##=========================
 		n_features = self._rhs.n_features
 		
 		## Define prior
-		##=============
 		prior = kwargs.get("prior")
 		if prior is None:
 			prior = sc.multivariate_normal( mean = np.zeros(n_features) , cov = 10 * np.identity(n_features) )
 		
 		## Define transition
-		##==================
 		transition = kwargs.get("transition")
 		if transition is None:
 			transition = lambda x : x + np.random.normal( scale = np.sqrt(np.diag(prior.cov)) / 5 )
 		
 		## Define numbers of iterations of MCMC algorithm
-		##===============================================
-		n_mcmc_drawn = kwargs.get("n_mcmc_drawn")
-		if n_mcmc_drawn is None:
-			n_mcmc_drawn = 10000
+		n_mcmc_drawn = kwargs.get("n_mcmc_drawn",10000)
+		n_burn       = kwargs.get("burn"        ,int(0.1*n_mcmc_drawn) )
 		
 		## MCMC algorithm
-		##===============
-		draw   = np.zeros( (n_mcmc_drawn,n_features) )
-		accept = np.zeros( n_mcmc_drawn , dtype = bool )
+		draw   = np.zeros( (n_mcmc_drawn + n_burn ,n_features) )
+		accept = np.zeros(  n_mcmc_drawn + n_burn , dtype = bool )
 		
 		## Init values
-		##============
-		init = kwargs.get("mcmc_init")
-		if init is None:
-			init = prior.rvs()
+		init = kwargs.get( "mcmc_init" , prior.rvs(1) )
 		
-		draw[0,:]     = init
-		lll_current   = -self._negloglikelihood(draw[0,:])
-		prior_current = prior.logpdf(draw[0,:]).sum()
-		p_current     = prior_current + lll_current
+		## Call c++
+		draw,accept = mcmc_cpp( init ,
+		             n_mcmc_drawn + n_burn ,
+		             self._negloglikelihood,
+		             lambda x : prior.logpdf(x).sum(),
+		             transition
+		            )
+#		draw[0,:]     = init
+#		lll_current   = -self._negloglikelihood(draw[0,:])
+#		prior_current = prior.logpdf(draw[0,:]).sum()
+#		p_current     = prior_current + lll_current
+#		
+#		for i in range(1,n_mcmc_drawn):
+#			draw[i,:] = transition(draw[i-1,:])
+#			
+#			## Likelihood and probability of new points
+#			lll_next   = - self._negloglikelihood(draw[i,:])
+#			prior_next = prior.logpdf(draw[i,:]).sum()
+#			p_next     = prior_next + lll_next
+#			
+#			## Accept or not ?
+#			p_accept = np.exp( p_next - p_current )
+#			if np.random.uniform() < p_accept:
+#				lll_current   = lll_next
+#				prior_current = prior_next
+#				p_current     = p_next
+#				accept[i] = True
+#			else:
+#				draw[i,:] = draw[i-1,:]
+#				accept[i] = False
 		
-		for i in range(1,n_mcmc_drawn):
-			draw[i,:] = transition(draw[i-1,:])
-			
-			## Likelihood and probability of new points
-			lll_next   = - self._negloglikelihood(draw[i,:])
-			prior_next = prior.logpdf(draw[i,:]).sum()
-			p_next     = prior_next + lll_next
-			
-			## Accept or not ?
-			p_accept = np.exp( p_next - p_current )
-			if np.random.uniform() < p_accept:
-				lll_current   = lll_next
-				prior_current = prior_next
-				p_current     = p_next
-				accept[i] = True
-			else:
-				draw[i,:] = draw[i-1,:]
-				accept[i] = False
-		
-		self.coef_ = np.mean( draw[int(n_mcmc_drawn/2):,:] , axis = 0 )
+		accept = np.array(accept)
 		
 		## Update information
-		self.info_.draw         = draw
-		self.info_.accept       = accept
+		self.info_.draw         = draw[n_burn:,:]
+		self.info_.accept       = accept[n_burn:]
 		self.info_.n_mcmc_drawn = n_mcmc_drawn
 		self.info_.rate_accept  = np.sum(accept) / n_mcmc_drawn
-		self.info_._cov         = np.cov(draw.T)
+		self.info_.cov_         = np.cov(draw.T)
+		
+		self.coef_ = np.mean( self.info_.draw , axis = 0 )
+		
 	##}}}
 	
 	def fit( self , Y , **kwargs ): ##{{{

@@ -164,6 +164,17 @@ ext_modules = [
 			"SDFC/src/FrishNewton.hpp"
 			]
 	),
+	Extension(
+		'SDFC.__bayesian_mcmc_cpp',
+		[ str( cpath / 'SDFC/src/bayesian_mcmc.cpp') ],
+		include_dirs=[
+			# Path to pybind11 headers
+			get_eigen_include(eigen_usr_include),
+			get_pybind_include(),
+			get_pybind_include(user=True)
+		],
+		language='c++',
+	),
 ]
 
 
