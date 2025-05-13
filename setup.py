@@ -29,6 +29,7 @@ from setuptools import setup
 from setuptools import Extension
 from pathlib import Path
 
+import pybind11
 
 ############################
 ## Python path resolution ##
@@ -86,9 +87,11 @@ def get_eigen_include():##{{{
 ext_modules = [
 	Extension(
 		'SDFC.NonParametric.__NonParametric_cpp',
-		[ str( cpath / 'SDFC/src/NonParametric.cpp') ],
+		[ 'SDFC/src/NonParametric.cpp' ],
 		include_dirs=[
 			get_eigen_include(),
+			pybind11.get_include(True),
+			pybind11.get_include(False),
 		],
 		language='c++',
 		depends = [
@@ -99,9 +102,11 @@ ext_modules = [
 	),
 	Extension(
 		'SDFC.__bayesian_mcmc_cpp',
-		[ str( cpath / 'SDFC/src/bayesian_mcmc.cpp') ],
+		[ 'SDFC/src/bayesian_mcmc.cpp' ],
 		include_dirs=[
 			get_eigen_include(),
+			pybind11.get_include(True),
+			pybind11.get_include(False),
 		],
 		language='c++',
 		extra_compile_args = ["-O3"],
@@ -147,12 +152,10 @@ setup(
 	platforms        = [ "linux" , "macosx" ],
 	classifiers      = [
 		"Development Status :: 5 - Production/Stable",
-		"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 		"Natural Language :: English",
 		"Operating System :: MacOS :: MacOS X",
 		"Operating System :: POSIX :: Linux",
 		"Programming Language :: Python :: 3",
-		"Programming Language :: Python :: 3.7",
 		"Programming Language :: Python :: 3.8",
 		"Programming Language :: Python :: 3.9",
 		"Programming Language :: Python :: 3.10",
@@ -162,6 +165,7 @@ setup(
 		"Topic :: Scientific/Engineering :: Mathematics"
 	],
 	ext_modules      = ext_modules,
+	setup_requires   = ["pybind11>=2.2"],
 	build_requires   = ["pybind11>=2.2"],
 	install_requires = [ "numpy" , "scipy" , "pybind11>=2.2" ],
 	zip_safe         = False,
